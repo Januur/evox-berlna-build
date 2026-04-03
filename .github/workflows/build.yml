@@ -70,10 +70,6 @@ jobs:
         <?xml version="1.0" encoding="UTF-8"?>
         <manifest>
 
-          <!-- Remove vendor/gms to avoid 504 timeout -->
-          <!-- GApps will be flashed separately after ROM -->
-          <remove-project name="evolution-x/vendor_gms" />
-
           <!-- Device Tree -->
           <project name="Januur/android_device_motorola_berlna"
                    path="device/motorola/berlna"
@@ -104,9 +100,9 @@ jobs:
     - name: Sync Source
       run: |
         cd ~/evox
-        repo sync -c -j4 --force-sync --no-clone-bundle --no-tags || \
-        repo sync -c -j2 --force-sync --no-clone-bundle --no-tags || \
-        repo sync -c -j1 --force-sync --no-clone-bundle --no-tags
+        repo sync -c -j4 --force-sync --no-clone-bundle --no-tags --ignore-missing || \
+        repo sync -c -j2 --force-sync --no-clone-bundle --no-tags --ignore-missing || \
+        repo sync -c -j1 --force-sync --no-clone-bundle --no-tags --ignore-missing || true
 
     - name: Cache CCache
       uses: actions/cache@v4
