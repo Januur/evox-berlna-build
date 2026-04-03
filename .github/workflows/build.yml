@@ -30,6 +30,7 @@ jobs:
         sudo docker image prune --all --force
         sudo apt-get clean
         df -h
+
     - name: Install Dependencies
       run: |
         sudo apt-get update
@@ -66,21 +67,25 @@ jobs:
         <?xml version="1.0" encoding="UTF-8"?>
         <manifest>
 
+          <!-- Device Tree -->
           <project name="Januur/android_device_motorola_berlna"
                    path="device/motorola/berlna"
                    remote="github"
                    revision="lineage-23.2" />
 
+          <!-- Common Tree -->
           <project name="Januur/android_device_motorola_sm7325-common"
                    path="device/motorola/sm7325-common"
                    remote="github"
                    revision="lineage-23.2" />
 
-          <project name="Januur/android_kernel_motorola_sm7325"
+          <!-- Kernel — using LineageOS directly (has lineage-23.2) -->
+          <project name="LineageOS/android_kernel_motorola_sm7325"
                    path="kernel/motorola/sm7325"
                    remote="github"
                    revision="lineage-23.2" />
 
+          <!-- Vendor Blobs -->
           <project name="Januur/proprietary_vendor_motorola_berlna"
                    path="vendor/motorola/berlna"
                    remote="github"
@@ -92,7 +97,9 @@ jobs:
     - name: Sync Source
       run: |
         cd ~/evox
-        repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
+        repo sync -c -j4 --force-sync --no-clone-bundle --no-tags || \
+        repo sync -c -j2 --force-sync --no-clone-bundle --no-tags || \
+        repo sync -c -j1 --force-sync --no-clone-bundle --no-tags
 
     - name: Cache CCache
       uses: actions/cache@v4
