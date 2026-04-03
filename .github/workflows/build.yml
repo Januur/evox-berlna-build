@@ -51,6 +51,9 @@ jobs:
         git config --global user.email "januur@build.com"
         git config --global user.name "Januur"
         git config --global color.ui false
+        git config --global http.postBuffer 524288000
+        git config --global http.lowSpeedLimit 0
+        git config --global http.lowSpeedTime 999999
 
     - name: Init EvoX A16 Manifest
       run: |
@@ -67,6 +70,10 @@ jobs:
         <?xml version="1.0" encoding="UTF-8"?>
         <manifest>
 
+          <!-- Remove vendor/gms to avoid 504 timeout -->
+          <!-- GApps will be flashed separately after ROM -->
+          <remove-project name="evolution-x/vendor_gms" />
+
           <!-- Device Tree -->
           <project name="Januur/android_device_motorola_berlna"
                    path="device/motorola/berlna"
@@ -79,7 +86,7 @@ jobs:
                    remote="github"
                    revision="lineage-23.2" />
 
-          <!-- Kernel — using LineageOS directly (has lineage-23.2) -->
+          <!-- Kernel -->
           <project name="LineageOS/android_kernel_motorola_sm7325"
                    path="kernel/motorola/sm7325"
                    remote="github"
