@@ -48,7 +48,6 @@ jobs:
         repo init \
           -u https://github.com/Evolution-X/manifest \
           -b bq2 \
-          --git-lfs \
           --depth=1
 
     - name: Setup Local Manifest
