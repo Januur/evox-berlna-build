@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    timeout-minutes: 600 # Android 16 builds require significant time
+    timeout-minutes: 600
     steps:
     - name: Free Disk Space
       run: |
@@ -38,15 +38,17 @@ jobs:
         echo "$HOME/bin" >> $GITHUB_PATH
         git config --global user.email "januur@build.com"
         git config --global user.name "Januur"
-        # Optimized Git settings to prevent 504/EOF errors
-        git config --global http.postBuffer 1048576000
+        # Massive buffers and Protocol v2 to bypass 504/Timeout errors
+        git config --global http.postBuffer 2048M
         git config --global http.lowSpeedLimit 0
         git config --global http.lowSpeedTime 999999
         git config --global core.compression 0
+        git config --global protocol.version 2
 
     - name: Init EvoX A16 Manifest
       run: |
         mkdir ~/evox && cd ~/evox
+        # Note: Added --git-lfs for binary stability
         repo init \
           -u https://github.com/Evolution-X/manifest \
           -b bq2 \
@@ -69,9 +71,21 @@ jobs:
     - name: Sync Source
       run: |
         cd ~/evox
-        # Try syncing with 4 threads; if it fails, fallback to 1 thread for stability
-        repo sync -c -j4 --force-sync --no-clone-bundle --no-tags || \
-        repo sync -c -j1 --force-sync --no-clone-bundle --no-tags
+        
+        # Step 1: Initial bulk sync (ignoring failures to keep moving)
+        echo "Performing initial bulk sync..."
+        repo sync -c -j8 --force-sync --no-clone-bundle --no-tags --quiet || true
+
+        # Step 2: Target vendor/gms specifically (the problematic repo)
+        echo "Targeting vendor/gms with high-stability settings..."
+        for i in 1 2 3; do
+          echo "Attempt $i to sync vendor/gms..."
+          repo sync -c -j1 --force-sync --no-clone-bundle --no-tags vendor/gms && break || sleep 60
+        done
+
+        # Step 3: Final pass to catch everything else and fix links
+        echo "Final sync pass..."
+        repo sync -c -j4 --force-sync --no-clone-bundle --no-tags
 
     - name: Verify Sync
       run: |
