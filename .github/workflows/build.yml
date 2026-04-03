@@ -100,9 +100,22 @@ jobs:
     - name: Sync Source
       run: |
         cd ~/evox
-        repo sync -c -j4 --force-sync --no-clone-bundle --no-tags --ignore-missing || \
-        repo sync -c -j2 --force-sync --no-clone-bundle --no-tags --ignore-missing || \
-        repo sync -c -j1 --force-sync --no-clone-bundle --no-tags --ignore-missing || true
+        for i in 1 2 3; do
+          echo "Sync attempt $i"
+          repo sync -c -j4 --force-sync --no-clone-bundle --no-tags && break
+          repo sync -c -j1 --force-sync --no-clone-bundle --no-tags && break
+          echo "Attempt $i failed, retrying..."
+          sleep 30
+        done
+
+    - name: Verify Sync
+      run: |
+        if [ ! -f ~/evox/build/envsetup.sh ]; then
+          echo "ERROR: Sync failed! build/envsetup.sh not found!"
+          exit 1
+        fi
+        echo "Sync verified OK!"
+        df -h
 
     - name: Cache CCache
       uses: actions/cache@v4
