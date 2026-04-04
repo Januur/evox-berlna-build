@@ -90,9 +90,15 @@ jobs:
                    remote="github"
                    revision="lineage-23.2" />
 
-          <!-- Vendor Blobs -->
+          <!-- Vendor Blobs - berlna -->
           <project name="Januur/proprietary_vendor_motorola_berlna"
                    path="vendor/motorola/berlna"
+                   remote="github"
+                   revision="lineage-23.2" />
+
+          <!-- Vendor Blobs - sm7325-common (MISSING!) -->
+          <project name="TheMuppets/proprietary_vendor_motorola_sm7325-common"
+                   path="vendor/motorola/sm7325-common"
                    remote="github"
                    revision="lineage-23.2" />
 
