@@ -1,4 +1,5 @@
 name: Build EvoX A16 - berlna
+
 on:
   workflow_dispatch:
     inputs:
@@ -10,14 +11,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    timeout-minutes: 600
+    timeout-minutes: 360
+
     steps:
-    - name: Free Disk Space
-      run: |
-        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost /usr/share/swift /usr/local/.ghcup /usr/local/share/powershell /usr/local/share/chromium /usr/local/lib/node_modules
-        sudo docker image prune --all --force
-        sudo apt-get clean
-        df -h
+
+    - name: Free Disk Space (Maximum)
+      uses: jlumbroso/free-disk-space@main
+      with:
+        tool-cache: true
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: true
+        docker-images: true
+        swap-storage: true
 
     - name: Install Dependencies
       run: |
@@ -29,6 +36,7 @@ jobs:
           libxml2 libxml2-utils lzop m4 openssl pngcrush rsync \
           schedtool squashfs-tools xsltproc zip zlib1g-dev \
           python3 python3-pip openjdk-11-jdk
+        df -h
 
     - name: Setup Repo Tool
       run: |
@@ -38,22 +46,18 @@ jobs:
         echo "$HOME/bin" >> $GITHUB_PATH
         git config --global user.email "januur@build.com"
         git config --global user.name "Januur"
-        # Massive buffers and Protocol v2 to bypass 504/Timeout errors
-        git config --global http.postBuffer 2048M
+        git config --global color.ui false
+        git config --global http.postBuffer 524288000
         git config --global http.lowSpeedLimit 0
         git config --global http.lowSpeedTime 999999
-        git config --global core.compression 0
-        git config --global protocol.version 2
 
     - name: Init EvoX A16 Manifest
       run: |
         mkdir ~/evox && cd ~/evox
-        # Note: Added --git-lfs for binary stability
         repo init \
           -u https://github.com/Evolution-X/manifest \
           -b bq2 \
-          --depth=1 \
-          --git-lfs
+          --depth=1
 
     - name: Setup Local Manifest
       run: |
@@ -61,39 +65,53 @@ jobs:
         cat > ~/evox/.repo/local_manifests/berlna.xml << 'EOF'
         <?xml version="1.0" encoding="UTF-8"?>
         <manifest>
-          <project name="Januur/android_device_motorola_berlna" path="device/motorola/berlna" remote="github" revision="lineage-23.2" />
-          <project name="Januur/android_device_motorola_sm7325-common" path="device/motorola/sm7325-common" remote="github" revision="lineage-23.2" />
-          <project name="LineageOS/android_kernel_motorola_sm7325" path="kernel/motorola/sm7325" remote="github" revision="lineage-23.2" />
-          <project name="Januur/proprietary_vendor_motorola_berlna" path="vendor/motorola/berlna" remote="github" revision="lineage-23.2" />
+
+          <!-- Skip huge clang prebuilts to save disk space -->
+          <remove-project name="platform/prebuilts/clang/host/linux-x86" />
+
+          <!-- Skip vendor_gms (504 timeout) flash GApps separately -->
+          <remove-project name="vendor_gms" />
+
+          <!-- Device Tree -->
+          <project name="Januur/android_device_motorola_berlna"
+                   path="device/motorola/berlna"
+                   remote="github"
+                   revision="lineage-23.2" />
+
+          <!-- Common Tree -->
+          <project name="Januur/android_device_motorola_sm7325-common"
+                   path="device/motorola/sm7325-common"
+                   remote="github"
+                   revision="lineage-23.2" />
+
+          <!-- Kernel -->
+          <project name="LineageOS/android_kernel_motorola_sm7325"
+                   path="kernel/motorola/sm7325"
+                   remote="github"
+                   revision="lineage-23.2" />
+
+          <!-- Vendor Blobs -->
+          <project name="Januur/proprietary_vendor_motorola_berlna"
+                   path="vendor/motorola/berlna"
+                   remote="github"
+                   revision="lineage-23.2" />
+
         </manifest>
         EOF
 
     - name: Sync Source
       run: |
         cd ~/evox
-        
-        # Step 1: Initial bulk sync (ignoring failures to keep moving)
-        echo "Performing initial bulk sync..."
-        repo sync -c -j8 --force-sync --no-clone-bundle --no-tags --quiet || true
-
-        # Step 2: Target vendor/gms specifically (the problematic repo)
-        echo "Targeting vendor/gms with high-stability settings..."
-        for i in 1 2 3; do
-          echo "Attempt $i to sync vendor/gms..."
-          repo sync -c -j1 --force-sync --no-clone-bundle --no-tags vendor/gms && break || sleep 60
-        done
-
-        # Step 3: Final pass to catch everything else and fix links
-        echo "Final sync pass..."
         repo sync -c -j4 --force-sync --no-clone-bundle --no-tags
+        df -h
 
     - name: Verify Sync
       run: |
         if [ ! -f ~/evox/build/envsetup.sh ]; then
-          echo "ERROR: Sync failed! build/envsetup.sh not found!"
+          echo "Sync failed!"
           exit 1
         fi
-        echo "Sync verified OK!"
+        echo "Sync OK!"
 
     - name: Cache CCache
       uses: actions/cache@v4
@@ -107,7 +125,7 @@ jobs:
         cd ~/evox
         export USE_CCACHE=1
         export CCACHE_EXEC=/usr/bin/ccache
-        ccache -M 20G
+        ccache -M 10G
         source build/envsetup.sh
         lunch evolution_berlna-${{ github.event.inputs.BUILD_TYPE }}
         mka bacon 2>&1 | tee ~/build.log
