@@ -96,7 +96,7 @@ jobs:
                    remote="github"
                    revision="lineage-23.2" />
 
-          <!-- Vendor Blobs - sm7325-common (MISSING!) -->
+          <!-- Vendor Blobs - sm7325-common -->
           <project name="TheMuppets/proprietary_vendor_motorola_sm7325-common"
                    path="vendor/motorola/sm7325-common"
                    remote="github"
@@ -125,6 +125,13 @@ jobs:
         path: ~/.ccache
         key: evox-berlna-${{ github.run_id }}
         restore-keys: evox-berlna-
+
+    - name: Create GMS Stub
+      run: |
+        mkdir -p ~/evox/vendor/gms
+        touch ~/evox/vendor/gms/gms_full.mk
+        touch ~/evox/vendor/gms/gms_go_full.mk
+        echo "# GMS stub for offline build" > ~/evox/vendor/gms/Android.mk
 
     - name: Build ROM
       run: |
